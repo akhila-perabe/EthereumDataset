@@ -280,7 +280,8 @@ We have extracted the following features from the dataset for t-1 day:
 1. The number of valid transactions in the day
 2. Total token amount of transactions done in the day
 3. Mean of token amounts in the day
-4. Price rise or drop that occured from the previous day.
+4. Prices of the previous 3 days
+5. Market cap and volume of the day
 
 These features are then used to build a linear regression model using lm function. The results of the model is as shown below.
 
@@ -332,7 +333,8 @@ lmHeight = lm(finalTable$price_return~
                 (finalTable$Frequency * finalTable$TransMean)+
                 (finalTable$Market.Cap * finalTable$Volume)+
                 log(finalTable$Volume)+
-                log(finalTable$Market.Cap)
+                log(finalTable$Market.Cap)+
+                finalTable$TotalTrans
               , data = finalTable)
 summary(lmHeight) 
 ```
