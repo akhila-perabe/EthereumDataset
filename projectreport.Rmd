@@ -310,6 +310,8 @@ shift <- function(x, n){
 priceDataset["PrevDayPrice"] <- shift(priceDataset$Open, 1)
 priceDataset["Prev2DayPrice"] <- shift(priceDataset$Open, 2)
 priceDataset["Prev3DayPrice"] <- shift(priceDataset$Open, 3)
+priceDataset["Volume"] <- shift(priceDataset$Volume, 1)
+priceDataset["Market.Cap"] <- shift(priceDataset$Market.Cap, 1)
 
 # Get the transaction frequency, total transaction amount, mean transaction amount for t-1 day
 finalTable<-merge(x=priceDataset, y = UniqueBuyerscount, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
@@ -327,7 +329,10 @@ lmHeight = lm(finalTable$price_return~
                 finalTable$PrevDayPrice+
                 finalTable$Prev2DayPrice+
                 finalTable$Prev3DayPrice+
-                (finalTable$Frequency * finalTable$TransMean)
+                (finalTable$Frequency * finalTable$TransMean)+
+                (finalTable$Market.Cap * finalTable$Volume)+
+                log(finalTable$Volume)+
+                log(finalTable$Market.Cap)
               , data = finalTable)
 summary(lmHeight) 
 ```
