@@ -308,25 +308,35 @@ shift <- function(x, n){
 
 # Get the previous day prices for each day
 priceDataset["PrevDayPrice"] <- shift(priceDataset$Open, 1)
-priceDataset["PrevPrevDayPrice"] <- shift(priceDataset$Open, 2)
-
-# Calculate price return for each day
-finalTable["price_return"]<-(finalTable$Open-finalTable$PrevDayPrice)/(finalTable$PrevDayPrice)
+priceDataset["Prev2DayPrice"] <- shift(priceDataset$Open, 2)
+priceDataset["Prev3DayPrice"] <- shift(priceDataset$Open, 3)
 
 # Get the transaction frequency, total transaction amount, mean transaction amount for t-1 day
 finalTable<-merge(x=priceDataset, y = UniqueBuyerscount, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
 finalTable<-merge(x=finalTable, y = MeanTrans, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
 finalTable<-merge(x=finalTable, y = TotalTrans, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
 
+# Calculate price return for each day
+finalTable["price_return"]<-(finalTable$Open-finalTable$PrevDayPrice)/(finalTable$PrevDayPrice)
+
+finalTable["Market.Cap"]<-as.numeric(gsub(",", "", finalTable$Market.Cap))
+finalTable["Volume"]<-as.numeric(gsub(",", "", finalTable$Volume))
+
 # Create the linear regression model
 lmHeight = lm(finalTable$price_return~
-                (finalTable$PrevDayPrice-finalTable$PrevPrevDayPrice)+
-                finalTable$Frequency+
-                finalTable$TotalTrans+
-                finalTable$TransMean
-                , data = finalTable) #Create the linear regression
+                finalTable$PrevDayPrice+
+                finalTable$Prev2DayPrice+
+                finalTable$Prev3DayPrice+
+                (finalTable$Frequency * finalTable$TransMean)+
+                (finalTable$Market.Cap * finalTable$Volume)+
+                log(finalTable$Volume)+
+                log(finalTable$Market.Cap)
+              , data = finalTable)
 summary(lmHeight) 
 ```
+
+
+As you see in the above results, features of the previous day are not able to predict the price return for the current day. This could be because the price return is dependent on other variables not available in this dataset.
 
 ##References
 
