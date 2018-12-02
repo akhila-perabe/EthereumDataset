@@ -1,0 +1,311 @@
+---
+title: "Ethereum Dataset - BAT "
+author: "Akhila Perabe, Harichandana Epuri"
+date: "1 December 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(error=TRUE, echo = FALSE)
+library("fitdistrplus")
+library("dplyr")
+library("exptest")
+library("ggpubr")
+```
+##Ethereum
+Ethereum is a public opensource blockchain-based distributed computing platform featuring smart contract functionality which are the applications that run exactly as programmed without any possibility of downtime fraud or third-party interference.These applications run on a enormously powerful shared global infrastructure  which is a custom built blockchain that can move value around and represent the ownership of property.
+This enables developers to create markets, store registries of debts or promises, move funds in accordance with instructions given long in the past and many other things that have not been invented yet, all without a middleman or counterparty risk.
+
+##ERC20
+
+ERC stands for Ethereum Request for Comments. It an official protocol for proposing improvements to the Ethereum(ETH) network. '20' is the unique proposal ID number.It defines a set of rules which need to be met in order for a token to be accepted and called an 'ERC20 Token'. The standard rules apply to all ERC20 Tokens since these rules are required to interact with each other on the Ethereum network. These tokens are blockchain assets that can have value and can be sent and received, like Bitcoin, Litecoin, Ethereum, or any other cryptocurrency. 
+
+##Primary Token
+
+The primary token we have considered for the data analysis is the 12th largest token, BAT. BAT stands for Basic Attention Token which radically improves the efficiency of digital advertising by creating a new token that can be exchanged between publishers, advertisers, and users. It all happens on the Ethereum blockchain.The token can be used to obtain a variety of advertising and attention-based services on the BAT platform. The utility of the token is based on user attention, which simply means a person's focused mental engagement.Its total supply is 1,500,000,000 and has decimal count of 18.
+
+```{r}
+data <- read.csv(file="/Users/akhila/Desktop/Stats/Project/Ethereum token graphs/networkbatTX.txt", header=FALSE, sep=" ")
+colnames(data)<- c("fromNodeID","toNodeID","UnixTime","tokenAmount")
+head(data)
+```
+
+The ethereum token graph file for BAT, networkbatTX.txt is loaded from the local system and used for processing. This dataset has a total of `r nrow(data)` number of token transactions.
+
+Also the token price graph for BAT is loaded from the local system. This price dataset will have open, close, high and low token price for each day.
+
+```{r}
+priceDataset <- read.csv(file="/Users/akhila/Desktop/Stats/Project/tokenPrices/bat", header=TRUE, sep="\t")
+```
+
+
+## Preprocessing the dataset
+For BAT, the total supply of tokens is $15*10^8$ and has decimal subunits of $10^{18}$
+
+```{r}
+totalSupply<-15*10^8*10^18
+```
+```{r}
+removed<-data[(data$tokenAmount>totalSupply),]
+data<-data[(data$tokenAmount<=totalSupply),]
+```
+So any transactions with token value over $`r totalSupply`$ needs to eliminated from the dataset since those transactions are impossible. By this constraint, we have removed `r nrow(removed)` transactions from the dataset which are outlier transactions. The remaining dataset will be used for processing in the next steps.
+
+The following are the outliers being eliminated:
+```{r}
+removed
+```
+
+
+## Distribution for selling token
+
+Here we are trying to find the distribution thats fits well for the selling frequency of a user with respect to this token and give a good estimate on the distribution parameters.
+
+Frequency of sales for each user is shown in the below table:
+```{r}
+sellingcount<-count(data,data$fromNodeID)
+colnames(sellingcount)<- c("sellerID","frequency")
+sellingcount
+```
+
+Sale counts frequency table for the token is as shown in the below table:
+```{r}
+sellingcountfrequency<-count(sellingcount,sellingcount$frequency)
+colnames(sellingcountfrequency)<-c("Numberofsales","frequency_of_no_of_sales")
+sellingcountfrequency
+```
+
+Now we plot Sales Count against its frequency using barplot. Below is the plot we have obtained:
+
+```{r}
+barplot(sellingcountfrequency$frequency_of_no_of_sales,names.arg =sellingcountfrequency$Numberofsales,ylab="Frequency_no_of_sales", xlab = "Number of sales" , xlim = c(0,30))
+```
+
+Verifying if the distribution is a weibull distribution using fitdistrplus:
+
+```{r}
+fit_selling <- fitdist(sellingcountfrequency$frequency_of_no_of_sales, "weibull")
+fit_selling
+plot(fit_selling)
+```
+
+The theoretical and empirical graph for weibull distribution does not match. So this is not a weibull distribution.
+
+Now verifying if the distribution is an exponential distribution using exptest:
+
+```{r}
+exptest::atkinson.exp.test(sellingcountfrequency$frequency_of_no_of_sales)
+```
+
+The p-value above is too lower than 0.05 so this is not an exponential distribution.
+
+Verifying if the distribution is a poisson distribution using fitdistrplus:
+
+```{r}
+fit_selling <- fitdist(sellingcountfrequency$frequency_of_no_of_sales, "pois")
+fit_selling
+plot(fit_selling)
+```
+
+This shows that theoretical and empirical graph matches for poisson distribution, so we can conclude that the given distribution is a poisson distribution.
+
+The selling distribution here has a mean of `r mean(sellingcountfrequency$frequency_of_no_of_sales)` and standard deviation of `r sd(sellingcountfrequency$frequency_of_no_of_sales)`
+
+## Distribution for buying token
+
+Here we are trying to find the distribution thats fits well for the buying frequency of a user with respect to this token and give a good estimate on the distribution parameters.
+
+Frequency of buying for each user is shown in the below table:
+
+```{r}
+buyingcount<-count(data,data$toNodeID)
+colnames(buyingcount)<- c("buyerID","frequency")
+head(buyingcount)
+```
+
+Buy counts frequency table for the token as in the below table:
+
+```{r}
+buyingcountfrequency<-count(buyingcount,buyingcount$frequency)
+colnames(buyingcountfrequency)<-c("Numberofbuys","frequency_of_no_of_buys")
+buyingcountfrequency
+```
+
+Now we plot Buy Count against its frequency using barplot. Below is the plot we have obtained:
+
+```{r}
+barplot(buyingcountfrequency$frequency_of_no_of_buys,names.arg =buyingcountfrequency$Numberofbuys,ylab="Frequency_no_of_buys", xlab = "Number of buys", xlim=c(0,20))
+```
+
+
+Verifying if the distribution is a weibull distribution using fitdistrplus:
+
+```{r}
+fit_buying <- fitdist(buyingcountfrequency$frequency_of_no_of_buys, "weibull")
+fit_buying
+plot(fit_buying)
+```
+
+The theoretical and empirical graph for weibull distribution does not match. So this is not a weibull distribution.
+
+Now verifying if the distribution is a exponential distribution using exptest:
+
+```{r}
+exptest::atkinson.exp.test(buyingcountfrequency$frequency_of_no_of_buys)
+```
+
+The p-value above is too lower than 0.05 so its not an exponential distribution.
+
+Verifying if the distribution is a poisson distribution using fitdistrplus:
+
+```{r}
+fit_buying  <- fitdist(buyingcountfrequency$frequency_of_no_of_buys, "pois")
+fit_buying
+plot(fit_buying)
+```
+
+This shows that theoretical and empirical graph matches for poisson distribution, so we can conclude that the given distribution is a poisson distribution.
+
+This distribution has a mean of `r mean(buyingcountfrequency$frequency_of_no_of_buys)` and standard deviation of `r sd(buyingcountfrequency$frequency_of_no_of_buys)`
+
+
+## Layering of token transactions based on amount.
+
+We want to create different layers for token transactions based on the transaction amount so that these layers can be analysed for any correlation with the price data. We will start with a random number of layers creation and then try to find a good value for number of layers.
+
+```{r}
+priceSd<-sd(data$tokenAmount)
+priceMean<-mean(data$tokenAmount)
+removedOutliers<-data[abs(data$tokenAmount-priceMean)>2*priceSd,]
+data<-data[abs(data$tokenAmount-priceMean)<=2*priceSd,]
+data["Date"]<-apply(data, 1, function(x) format(as.Date(as.POSIXct(x["UnixTime"], origin="1970-01-01")), "%m/%d/%Y"))
+```
+
+Before starting with the layer creation, we need to remove the outlier transactions, which are too far away from the price mean. We consider transactions priced 2*StandardDeviation away from the price mean as outlier data here and eliminate them. Thus `r nrow(removedOutliers)` transactions are removed from the data set by this constraint.
+
+We are considering the correlation between the number of transactions in a day with the change in the token price (High-Low). The correlation algorithms we have considered are pearson, spearman and kendall.
+
+We started by creating 10 layers with the following price ranges.
+
+$[ min-0.00005*max, 0.00005*max-0.0001*max, 0.0001*max-0.0005*max, 0.0005*max-0.001*max, 0.001*max-0.0015*max, 0.0015*max-0.004*max, 0.004*max-0.007*max, 0.007*max-0.01*max, 0.01*max-0.05*max, 0.05*max-max ]$
+
+Using this price range the corresponding correlation we obtained were:
+
+$[0.3506054, 0.3445820, 0.3853420, 0.4763306, 0.5697537, 0.5814955, 0.6011818, 0.5183419, 0.4622298, 0.2926601]$
+
+By further analysis on the above results, we decided to merge a few layers which have no significant difference in their correlation. Thus we have created 6 layers with the price ranges given below.
+
+$[ min-0.0005*max, 0.0005*max-0.001*max, 0.001*max-0.007*max, 0.007*max-0.01*max, 0.01*max-0.05*max, 0.05*max-max ]$
+
+Bar plots for each of the 6 layers is shown below:
+
+```{r}
+min<-min(data$tokenAmount)
+max<-max(data$tokenAmount)
+layers<-c(min, 0.0005*max, 0.001*max, 0.007*max, 0.01*max, 0.05*max, max)
+cor_arr<-c()
+
+i<-2
+while(i <= length(layers)) {
+  minThreshold<-layers[i-1]
+  maxThreshold<-layers[i]
+
+  layerData<-data[(data$tokenAmount>=minThreshold),]
+  layerData<-layerData[(layerData$tokenAmount<maxThreshold),]
+
+  counts<-count(layerData,layerData$Date)
+  colnames(counts)<- c("Date","frequency")
+
+   cat('\n')  
+   cat("Layer ", i-1, "\n") 
+   cat('\n')  
+   i<-i+1
+
+   barplot(counts$frequency,names.arg =counts$Date,ylab="Frequency of transactions", xlab = "Date")
+
+  layerPrices<-merge(x = counts, y = priceDataset, by = "Date", x.all=TRUE)
+  cor_arr<-c(cor_arr, (cor(layerPrices$frequency, layerPrices$High-layerPrices$Low, method = c("spearman"))))
+}
+
+```
+
+We are using cor() function to calculate the correlation using different algorithms like pearson, spearman.
+Using pearson algorithm, we obtained the correlation for the six layers as:
+
+[ 0.3844061, 0.4763306, 0.6162456, 0.5183419, 0.4622298, 0.2926601 ]
+
+Using spearman algorithm, we obtained the correlation as below, which shows better results than pearson algorithm.
+
+[ `r cor_arr` ]
+
+##Findings
+
+We see that the correlation between the token price change in the day (High-Low) with the number of transactions for the day is maximum in the price range [`r 0.001*max` - `r 0.007*max`] with correlation coefficient 0.628.
+
+This means that the transactions priced in the mid range depends significantly on the token price. The extreme lower and higher priced transactions does not significantly depend on the token price of the day but might be influenced by some other external factors.
+
+
+## Linear Regression for Price Return
+
+Here we are trying to build a linear regression model that can predict the price return for the day based on the features available in the dataset. Price return for the day represents the difference in the price from its orevious day and is given by the formula : $ \frac{P_t - P_{t-1}}{P_{t-1}} $.
+
+We have extracted the following features from the dataset for t-1 day:
+
+1. The number of valid transactions in the day
+2. Total token amount of transactions done in the day
+3. Mean of token amounts in the day
+4. Price rise or drop that occured from the previous day.
+
+These features are then used to build a linear regression model using lm function. The results of the model is as shown below.
+
+```{r}
+  
+priceDataset["PrevDate"]<-apply(priceDataset, 1, function(x) format(as.Date(x["Date"], "%m/%d/%Y")-1, "%m/%d/%Y"))
+
+UniqueBuyerscount<-count(data,data$Date)
+colnames(UniqueBuyerscount)<-c("Date","Frequency")
+
+MeanTrans<-(data %>%
+  group_by(Date) %>%
+  summarize(TransMean = mean(tokenAmount)))
+TotalTrans<-(data %>%
+  group_by(Date) %>%
+  summarize(TotalTrans = sum(tokenAmount)))
+
+```
+```{r}
+shift <- function(x, n){
+  c(x[-(seq(n))], rep(NA, n))
+}
+
+priceDataset["PrevDayPrice"] <- shift(priceDataset$Open, 1)
+priceDataset["PrevPrevDayPrice"] <- shift(priceDataset$Open, 2)
+```
+
+```{r}
+finalTable<-merge(x=priceDataset, y = UniqueBuyerscount, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
+finalTable["price_return"]<-(finalTable$Open-finalTable$PrevDayPrice)/(finalTable$PrevDayPrice)
+
+finalTable<-merge(x=finalTable, y = MeanTrans, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
+finalTable<-merge(x=finalTable, y = TotalTrans, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
+```
+```{r}
+lmHeight = lm(finalTable$price_return~
+                (finalTable$PrevDayPrice-finalTable$PrevPrevDayPrice)+
+                finalTable$Frequency+
+                finalTable$TotalTrans+
+                finalTable$TransMean
+                , data = finalTable) #Create the linear regression
+summary(lmHeight) 
+```
+
+##References
+
+1. https://www.ethereum.org/
+
+2. https://support.exodus.io/article/108-what-is-an-erc20-token-and-does-exodus-support-it
+
+3. https://basicattentiontoken.org/faq/
+
+
+
