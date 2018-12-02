@@ -327,10 +327,7 @@ lmHeight = lm(finalTable$price_return~
                 finalTable$PrevDayPrice+
                 finalTable$Prev2DayPrice+
                 finalTable$Prev3DayPrice+
-                (finalTable$Frequency * finalTable$TransMean)+
-                (finalTable$Market.Cap * finalTable$Volume)+
-                log(finalTable$Volume)+
-                log(finalTable$Market.Cap)
+                (finalTable$Frequency * finalTable$TransMean)
               , data = finalTable)
 summary(lmHeight) 
 ```
@@ -345,3 +342,6 @@ As you see in the above results, features of the previous day are not able to pr
 2. https://support.exodus.io/article/108-what-is-an-erc20-token-and-does-exodus-support-it
 
 3. https://basicattentiontoken.org/faq/
+
+
+
