@@ -10,3 +10,9 @@ The purpose of this project is to:
 1. Understand the buy and sell distribution of tokens
 2. Analyze the features/correlations in different layers of token transactions. Layers here is based on token amount.
 3. Create a linear regression model to predict the price return of a day based on the features of the previous day.
+
+
+
+This project is implemented using R Markdown. Results of this project can be found in the link below.
+
+http://www.utdallas.edu/~axp178830/batReport.html
