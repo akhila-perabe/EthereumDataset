@@ -1,8 +1,11 @@
 ---
-title: "Ethereum Dataset - BAT "
+title: 'Ethereum Dataset - BAT '
 author: "Akhila Perabe, Harichandana Epuri"
 date: "1 December 2018"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -278,12 +281,12 @@ Here we are trying to build a linear regression model that can predict the price
 We have extracted the following features from the dataset for t-1 day:
 
 1. The number of valid transactions in the day
-2. Total token amount of transactions done in the day
-3. Mean of token amounts in the day
-4. Prices of the previous 3 days
-5. Market cap and volume of the day
+2. Open Prices of the previous 3 days
+3. Close Prices of the previous 3 days
 
-These features are then used to build a linear regression model using lm function. The results of the model is as shown below.
+These features are then used to build a linear regression model using lm function.  This model created with features of the previous days is able to get R squared error of 0.735. This is a good model for price return prediction.
+The results of the model is shown below.
+
 
 ```{r}
 
@@ -313,6 +316,9 @@ priceDataset["Prev2DayPrice"] <- shift(priceDataset$Open, 2)
 priceDataset["Prev3DayPrice"] <- shift(priceDataset$Open, 3)
 priceDataset["Volume"] <- shift(priceDataset$Volume, 1)
 priceDataset["Market.Cap"] <- shift(priceDataset$Market.Cap, 1)
+priceDataset["prev1closeprice"]<-shift(priceDataset$Close,1)
+priceDataset["prev2closeprice"]<-shift(priceDataset$Close,2)
+priceDataset["prev3closeprice"]<-shift(priceDataset$Close,3)
 
 # Get the transaction frequency, total transaction amount, mean transaction amount for t-1 day
 finalTable<-merge(x=priceDataset, y = UniqueBuyerscount, by.x = "PrevDate", by.y = "Date", x.all=TRUE)
@@ -327,20 +333,14 @@ finalTable["Volume"]<-as.numeric(gsub(",", "", finalTable$Volume))
 
 # Create the linear regression model
 lmHeight = lm(finalTable$price_return~
-                finalTable$PrevDayPrice+
-                finalTable$Prev2DayPrice+
-                finalTable$Prev3DayPrice+
-                (finalTable$Frequency * finalTable$TransMean)+
-                (finalTable$Market.Cap * finalTable$Volume)+
-                log(finalTable$Volume)+
-                log(finalTable$Market.Cap)+
-                finalTable$TotalTrans
+                (finalTable$prev1closeprice+finalTable$prev2closeprice+finalTable$prev3closeprice)/
+                    (log(finalTable$PrevDayPrice)+
+                log(finalTable$Prev2DayPrice)+
+                log(finalTable$Prev3DayPrice)+finalTable$Frequency)
               , data = finalTable)
 summary(lmHeight) 
 ```
 
-
-As you see in the above results, features of the previous day are not able to predict the price return for the current day. This could be because the price return is dependent on other variables not available in this dataset.
 
 ##References
 
